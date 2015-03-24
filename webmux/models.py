@@ -8,7 +8,7 @@ from twisted.python import log
 
 import hashlib
 
-
+from webmux.webserial import SerialProtocol, Serial
 sqlhub.processConnection = connectionForURI('sqlite:webmux.db')
 factory = None
 
@@ -288,32 +288,59 @@ class Terminal(SQLObject):
 
         return model.serialize()
 
-    def connect(self):
-        log.msg("connecting to %s with user %s" % (self.conn.host, self.conn.user))
-        self.history = str("Connecting to %s...\r\n" % self.conn.host)
+#    def connect(self):
+#        log.msg("connecting to %s with user %s" % (self.conn.host, self.conn.user))
+#        self.history = str("Connecting to %s...\r\n" % self.conn.host)
 
-        if not self.conn.user:
-            raise Exception("No user given.")
-        if not self.conn.password and not self.conn.privkey:
-            raise Exception("No authentication details given.")
+#        if not self.conn.user:
+#            raise Exception("No user given.")
+#        if not self.conn.password and not self.conn.privkey:
+#            raise Exception("No authentication details given.")
+
+#        web_term = WebTerminal(self, self.id, self.window.cols, self.window.rows)
+
+#        Terminal.terminals[self.id] = web_term
+
+#        ssh = SSH(
+#            user=self.conn.user,
+#            password=self.conn.password,
+#            host=self.conn.host,
+#            port=self.conn.port,
+#            privkey=self.conn.privkey,
+#        )
+
+#        def err(e):
+#            self.write_to_terminal(self.id, e.value[0])
+
+#        ssh.connect(web_term, on_error=err)
+
+    def connect(self):
+        from twisted.internet import reactor
+        from argparse import ArgumentParser
+
+        #import webmux.serial
+        self.history = str("Connecting to serial")
+
+        import pdb
+        pdb.set_trace()
 
         web_term = WebTerminal(self, self.id, self.window.cols, self.window.rows)
-
         Terminal.terminals[self.id] = web_term
 
-        ssh = SSH(
-            user=self.conn.user,
-            password=self.conn.password,
-            host=self.conn.host,
-            port=self.conn.port,
-            privkey=self.conn.privkey,
-        )
+        parser = ArgumentParser()
+        parser.add_argument("-p", "--port", default=8080, type=int, help="Port to listen on.")
+
+        parser.add_argument("-d", "--device", default="/dev/ttyAMC2", help="Consle device");
+        parser.add_argument("-b", "--baudrate", default=115200, type=int, help="Baudrate for console device")
+        args = parser.parse_args()
+
+        sp = SerialProtocol()
+        serial = Serial(sp, args.device, reactor, args.baudrate)
 
         def err(e):
             self.write_to_terminal(self.id, e.value[0])
 
-        ssh.connect(web_term, on_error=err)
-
+        serial.connect(web_term, on_error=err)
 
     @classmethod
     def update_model(cls, data, protocol):
@@ -343,7 +370,9 @@ class Terminal(SQLObject):
         return True
 
     def write_to_terminal(self, terminal_id, data):
-        #log.msg("write to terminal %s %s" % (terminal_id, data))
+        log.msg("Terminal.write_to_terminal: id:%s data:%s" % (terminal_id, data))
+        import pdb
+        pdb.set_trace()
         model = Terminal.get(terminal_id)
 
         model.history += str(data)

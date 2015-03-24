@@ -17,6 +17,7 @@ class SockJSPubSubProtocol(Protocol):
         retval = {}
         ex = None
 
+        log.msg("SockJSPubSubProtocol.dataReceived function:%s" % (json_data["type"]))
         try:
             func_retval = getattr(self, json_data["type"])(*json_data["args"])
         except Exception, e:

@@ -51,6 +51,7 @@ class SSHSession(channel.SSHChannel):
         self.conn.sendRequest(self, 'shell', '')
 
     def dataReceived(self, data):
+        log.msg("SSHSession.dataReceived: %s" % data)
         self.stdio.write(data)
 
     def extReceived(self, t, data):

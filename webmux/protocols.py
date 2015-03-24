@@ -15,6 +15,10 @@ SYNC_TABLES = {
 class TerminalProtocol(SockJSPubSubProtocol):
     @staticmethod
     def data(terminal_id, data_to_write):
+	printed_data = data_to_write.encode('utf8')
+        log.msg("TerminalProtocol.data: terminal id:%d, data:%s" % (terminal_id, printed_data))
+        import pdb
+        pdb.set_trace()
         Terminal.terminals[terminal_id].active_session.dataReceived(data_to_write.encode('utf8'))
 
     @staticmethod
@@ -27,6 +31,7 @@ class TerminalProtocol(SockJSPubSubProtocol):
     #     TerminalFactory.trigger_all("sync", "terminals", "delete", {"id": terminal_id})
 
     def sync(self, namespace, method, data):
+        log.msg("TerminalProtocol.sync namespace: %s; method: %s" % (namespace, method))
         if method != "read" and not data:
             print "No data for sync: %s %s" % (namespace, method)
             return

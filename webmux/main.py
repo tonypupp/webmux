@@ -29,6 +29,9 @@ def main(args):
     parser = ArgumentParser()
     parser.add_argument("-p", "--port", default=8080, type=int, help="Port to listen on.")
 
+    parser.add_argument("-d", "--device", default="/dev/ttyAMC2", help="Consle device");
+    parser.add_argument("-b", "--baudrate", default=115200, type=int, help="Baudrate for console device")
+
     args = parser.parse_args()
 
     WEBMUX_STATIC_PATH = os.path.join(webmux.__path__[0], "static")
