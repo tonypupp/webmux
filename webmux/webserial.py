@@ -9,17 +9,41 @@ from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 from twisted.python import log
 
 class Serial(SerialPort):
-    def __init__(self, protocol, deviceNameOrPortNumber, reactor,
+    session = {}
+    def __init__(self, deviceNameOrPortNumber, reactor,
     baudrate = 115200, bytesize = EIGHTBITS, parity = PARITY_NONE,
     stopbits = STOPBITS_ONE, timeout = 0, xonxoff = 0, rtscts = 0):
-        super(Serial, self).__init__(protocol, deviceNameOrPortNumber,
+        self.protocol = SerialProtocol()
+        super(Serial, self).__init__(self.protocol, deviceNameOrPortNumber,
         reactor, baudrate, bytesize, parity, stopbits, timeout, xonxoff,
         rtscts)
-        self.protocol = protocol
 
     def connect(self, terminal, on_error=None):
-        self.session = SerialSession(self, terminal)
-        self.protocol.openSession(self.session)
+        Serial.session[terminal._id] = SerialSession(self, terminal)
+        self.protocol.openSession(Serial.session[terminal._id])
+
+class SerialFactory(object):
+    serial = None
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def getserial(cls):
+        from twisted.internet import reactor
+        from argparse import ArgumentParser
+
+        parser = ArgumentParser()
+        parser.add_argument("-p", "--port", default=8080, type=int, help="Prot to listen on/")
+        parser.add_argument("-d", "--device", default="/dev/ttyACM2", help="Consle device")
+        parser.add_argument("-b", "--baudrate", default=115200, type=int, help="Baudrate for console device")
+        args = parser.parse_args()
+
+        if(cls.serial == None):
+            cls.serial = Serial(args.device, reactor, args.baudrate)
+
+        return cls.serial
+
 
 class SerialProtocol(Protocol):
     def __init__ (self):
@@ -32,42 +56,22 @@ class SerialProtocol(Protocol):
         pass
 
     def openSession(self, session):
-        self.session = session
-        self.session.openSession()
+        session.openSession()
         self.opened = True
 
     def closeSession(self):
-        self.session = False
         self.opened = False
 
     def dataReceived(self, data):
         '''Data received from serial, send them to web session'''
         if (self.opened == True):
-            self.session.dataReceived(data)
-
-    def trigger(self, type, *args):
-        pass
-
-    def trigger_all(self, type, *args):
-        pass
-
-class SerialProtocolFactory(Factory):
-    protocol = SerialProtocol
-    transports = set()
-
-    def trigger_all(self, type, *args):
-        raw_data = json.dump({
-            "type": type,
-            "args": list(args),
-        })
-
-        for transport in self.transports:
-            transport.write(raw_data)
+            for id in Serial.session:
+                Serial.session[id].dataReceived(data)
 
 class SerialSession(object):
-    def __init__(self, serial, web_terminal):
+    def __init__(self, serial, webterminal):
         self.serial = serial
-        self.terminal = web_terminal
+        self.terminal = webterminal
 
     def openSession(self):
         client = SerialSessionClient(self)
